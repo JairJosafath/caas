@@ -33,4 +33,4 @@ def get_namespaces():
     return jsonify(ret.to_dict())
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host="0.0.0.0")

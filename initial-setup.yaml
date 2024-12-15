@@ -120,3 +120,24 @@ subjects:
   - kind: ServiceAccount
     name: python-k8-client
     namespace: caas-control-plane
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: caas-control-plane
+  name: myingress
+  labels:
+    name: myingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: python-k8-client
+                port:
+                  number: 5000
