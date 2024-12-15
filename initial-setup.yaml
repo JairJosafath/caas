@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: caas-control-plane
+  labels:
+    name: caas-control-plane
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-k8-client
+  namespace: caas-control-plane
+spec:
+  selector:
+    matchLabels:
+      app: python-k8-client
+  template:
+    metadata:
+      labels:
+        app: python-k8-client
+    spec:
+      serviceAccountName: python-k8-client
+      containers:
+        - name: python-k8-client
+          image: jairjosafath/caas-ctrl:latest
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: caas-control-plane
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  serviceName: mongodb
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 27017
+              name: mongodb
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: caas-control-plane
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-k8-client
+  namespace: caas-control-plane
+spec:
+  selector:
+    app: python-k8-client
+  ports:
+    - port: 5000
+      targetPort: 5000
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: python-k8-client
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: python-k8-client
+  namespace: caas-control-plane
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: python-k8-client
+  namespace: caas-control-plane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: python-k8-client
+subjects:
+  - kind: ServiceAccount
+    name: python-k8-client
+    namespace: caas-control-plane
